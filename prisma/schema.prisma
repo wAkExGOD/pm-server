@@ -8,6 +8,12 @@ datasource db {
   provider = "postgresql"
 }
 
+enum ProjectRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
 model ConfirmEmailToken {
   userId Int    @id
   token  String @unique
@@ -23,9 +29,55 @@ model PasswordRecoveryToken {
 model User {
   id                    Int                    @id @default(autoincrement())
   email                 String                 @unique
+  name                  String
   createdAt             DateTime               @default(now())
   password              String
   verified              Boolean                @default(false)
   ConfirmEmailToken     ConfirmEmailToken?
   PasswordRecoveryToken PasswordRecoveryToken?
+  ownedProjects         Project[]              @relation("ProjectOwner")
+  projectMemberships    ProjectMember[]
+}
+
+model Project {
+  id          Int             @id @default(autoincrement())
+  key         String          @unique
+  name        String
+  description String?
+  ownerId     Int
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members     ProjectMember[]
+  sprints     Sprint[]
+}
+
+model ProjectMember {
+  id        Int         @id @default(autoincrement())
+  projectId Int
+  userId    Int
+  role      ProjectRole @default(MEMBER)
+  createdAt DateTime    @default(now())
+  project   Project     @relation(fields: [projectId], references: [id])
+  user      User        @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([projectId, role])
+}
+
+model Sprint {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  goal      String?
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id])
+
+  @@index([projectId, isActive])
+  @@index([projectId, startDate])
 }

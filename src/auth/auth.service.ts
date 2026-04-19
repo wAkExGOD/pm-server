@@ -60,15 +60,22 @@ export class AuthService {
     }
 
     const createdUser = await this.usersService.create({
+      name: user.name.trim(),
       email: user.email,
       password: await argon2.hash(user.password),
     });
 
     const confirmToken = generateRandomString(String(createdUser.id));
 
-    await this.prisma.confirmEmailToken.create({
-      data: {
+    await this.prisma.confirmEmailToken.upsert({
+      where: {
         userId: createdUser.id,
+      },
+      create: {
+        userId: createdUser.id,
+        token: confirmToken,
+      },
+      update: {
         token: confirmToken,
       },
     });
@@ -100,9 +107,15 @@ export class AuthService {
 
     const forgotToken = generateRandomString(String(existingUser.id));
 
-    await this.prisma.passwordRecoveryToken.create({
-      data: {
+    await this.prisma.passwordRecoveryToken.upsert({
+      where: {
         userId: existingUser.id,
+      },
+      create: {
+        userId: existingUser.id,
+        token: forgotToken,
+      },
+      update: {
         token: forgotToken,
       },
     });
@@ -157,6 +170,7 @@ export class AuthService {
     return {
       id: userInfo.id,
       email: userInfo.email,
+      name: userInfo.name,
       createdAt: userInfo.createdAt,
       verified: userInfo.verified,
     };

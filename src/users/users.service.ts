@@ -11,6 +11,7 @@ export class UsersService {
   async create(data: Prisma.UserCreateInput): Promise<User> {
     return await this.prisma.user.create({
       data: {
+        name: data.name,
         email: data.email,
         password: data.password,
       },
