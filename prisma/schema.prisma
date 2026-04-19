@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ConfirmEmailToken {
+  userId Int    @id
+  token  String @unique
+  User   User   @relation(fields: [userId], references: [id])
+}
+
+model PasswordRecoveryToken {
+  userId Int    @id
+  token  String @unique
+  User   User   @relation(fields: [userId], references: [id])
+}
+
+model User {
+  id                    Int                    @id @default(autoincrement())
+  email                 String                 @unique
+  createdAt             DateTime               @default(now())
+  password              String
+  verified              Boolean                @default(false)
+  ConfirmEmailToken     ConfirmEmailToken?
+  PasswordRecoveryToken PasswordRecoveryToken?
+}
