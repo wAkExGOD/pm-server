@@ -14,6 +14,24 @@ enum ProjectRole {
   MEMBER
 }
 
+enum IssueType {
+  BUG
+  TASK
+  STORY
+}
+
+enum IssuePriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum IssueStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
 model ConfirmEmailToken {
   userId Int    @id
   token  String @unique
@@ -37,6 +55,8 @@ model User {
   PasswordRecoveryToken PasswordRecoveryToken?
   ownedProjects         Project[]              @relation("ProjectOwner")
   projectMemberships    ProjectMember[]
+  assignedIssues        Issue[]                @relation("IssueAssignee")
+  reportedIssues        Issue[]                @relation("IssueReporter")
 }
 
 model Project {
@@ -50,6 +70,7 @@ model Project {
   owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id])
   members     ProjectMember[]
   sprints     Sprint[]
+  issues      Issue[]
 }
 
 model ProjectMember {
@@ -77,7 +98,31 @@ model Sprint {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   project   Project  @relation(fields: [projectId], references: [id])
+  issues    Issue[]
 
   @@index([projectId, isActive])
   @@index([projectId, startDate])
+}
+
+model Issue {
+  id          Int           @id @default(autoincrement())
+  projectId   Int
+  title       String
+  description String?
+  type        IssueType
+  priority    IssuePriority
+  status      IssueStatus   @default(TODO)
+  assigneeId  Int?
+  reporterId  Int
+  sprintId    Int?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  project     Project       @relation(fields: [projectId], references: [id])
+  assignee    User?         @relation("IssueAssignee", fields: [assigneeId], references: [id])
+  reporter    User          @relation("IssueReporter", fields: [reporterId], references: [id])
+  sprint      Sprint?       @relation(fields: [sprintId], references: [id])
+
+  @@index([projectId, sprintId])
+  @@index([projectId, status])
+  @@index([projectId, priority])
 }

@@ -26,7 +26,11 @@ export class CreateProjectDto {
   key: string;
 
   @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim() : value === null ? undefined : value,
+    typeof value === 'string'
+      ? value.trim()
+      : value === null
+        ? undefined
+        : value,
   )
   @IsOptional()
   @IsString()
