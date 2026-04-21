@@ -13,5 +13,6 @@ export enum IssuePriority {
 export enum IssueStatus {
   TODO = 'TODO',
   IN_PROGRESS = 'IN_PROGRESS',
+  CODE_REVIEW = 'CODE_REVIEW',
   DONE = 'DONE',
 }

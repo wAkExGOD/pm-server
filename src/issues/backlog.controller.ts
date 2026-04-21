@@ -29,6 +29,14 @@ export class BacklogController {
     return await this.issuesService.listBacklog(projectId, req.user.id, dto);
   }
 
+  @Get('board')
+  async listBoard(
+    @Request() req: RequestWithUser,
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ) {
+    return await this.issuesService.listBoard(projectId, req.user.id);
+  }
+
   @Post('issues/:issueId/move-to-sprint')
   async moveIssueToSprint(
     @Request() req: RequestWithUser,

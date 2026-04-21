@@ -1,0 +1,1 @@
+ALTER TYPE "IssueStatus" ADD VALUE 'CODE_REVIEW';

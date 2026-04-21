@@ -12,9 +12,17 @@ import { ListIssuesDto } from './dto/list-issues.dto';
 import { ProjectRole } from 'src/projects/project-role.enum';
 import type { PrismaClient } from '../../generated/prisma/client.js';
 import { ListBacklogDto } from './dto/list-backlog.dto';
+import { IssueStatus } from './issue.enums';
 
 @Injectable()
 export class IssuesService {
+  private readonly boardStatuses: IssueStatus[] = [
+    IssueStatus.TODO,
+    IssueStatus.IN_PROGRESS,
+    IssueStatus.CODE_REVIEW,
+    IssueStatus.DONE,
+  ];
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly projectsService: ProjectsService,
@@ -213,6 +221,24 @@ export class IssuesService {
     return {
       activeSprint,
       items,
+    };
+  }
+
+  async listBoard(projectId: number, userId: number) {
+    await this.projectsService.ensureProjectAccess(projectId, userId);
+
+    const items = await this.issueDelegate.findMany({
+      where: { projectId },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      select: this.issueSelect,
+    });
+
+    return {
+      columns: this.boardStatuses.map((status) => ({
+        status,
+        /* eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison */
+        items: items.filter((issue) => issue.status === status),
+      })),
     };
   }
 
