@@ -11,6 +11,7 @@ import { UpdateIssueDto } from './dto/update-issue.dto';
 import { ListIssuesDto } from './dto/list-issues.dto';
 import { ProjectRole } from 'src/projects/project-role.enum';
 import type { PrismaClient } from '../../generated/prisma/client.js';
+import { ListBacklogDto } from './dto/list-backlog.dto';
 
 @Injectable()
 export class IssuesService {
@@ -148,6 +149,73 @@ export class IssuesService {
     return issue;
   }
 
+  async listBacklog(projectId: number, userId: number, dto: ListBacklogDto) {
+    await this.projectsService.ensureProjectAccess(projectId, userId);
+
+    const activeSprint = await this.prisma.sprint.findFirst({
+      where: {
+        projectId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        startDate: true,
+        endDate: true,
+      },
+    });
+
+    const where: Parameters<PrismaClient['issue']['findMany']>[0]['where'] = {
+      projectId,
+      AND: [
+        {
+          OR: [{ sprintId: null }, { sprint: { isActive: false } }],
+        },
+        ...(dto.search
+          ? [
+              {
+                OR: [
+                  {
+                    title: {
+                      contains: dto.search.trim(),
+                      mode: 'insensitive' as const,
+                    },
+                  },
+                  {
+                    description: {
+                      contains: dto.search.trim(),
+                      mode: 'insensitive' as const,
+                    },
+                  },
+                ],
+              },
+            ]
+          : []),
+      ],
+    };
+
+    const orderBy: Parameters<PrismaClient['issue']['findMany']>[0]['orderBy'] =
+      dto.sortBy === 'createdAt'
+        ? [{ createdAt: dto.order ?? 'desc' }, { id: 'desc' as const }]
+        : [
+            {
+              priority: dto.order === 'asc' ? 'asc' : 'desc',
+            },
+            { createdAt: 'desc' as const },
+          ];
+
+    const items = await this.issueDelegate.findMany({
+      where,
+      orderBy,
+      select: this.issueSelect,
+    });
+
+    return {
+      activeSprint,
+      items,
+    };
+  }
+
   async updateIssue(
     projectId: number,
     issueId: number,
@@ -222,6 +290,44 @@ export class IssuesService {
     });
 
     return { success: true };
+  }
+
+  async moveIssueToSprint(
+    projectId: number,
+    issueId: number,
+    userId: number,
+    sprintId?: number,
+  ) {
+    const membership = await this.projectsService.ensureProjectAccess(
+      projectId,
+      userId,
+    );
+    const existingIssue = await this.issueDelegate.findFirst({
+      where: { id: issueId, projectId },
+      select: {
+        id: true,
+        reporterId: true,
+      },
+    });
+
+    if (!existingIssue) {
+      throw new NotFoundException('Issue not found');
+    }
+
+    this.ensureCanManageIssue(
+      membership.role,
+      existingIssue.reporterId,
+      userId,
+    );
+    await this.validateIssueRelations(projectId, undefined, sprintId);
+
+    return await this.issueDelegate.update({
+      where: { id: issueId },
+      data: {
+        sprintId: sprintId ?? null,
+      },
+      select: this.issueSelect,
+    });
   }
 
   private async validateIssueRelations(
