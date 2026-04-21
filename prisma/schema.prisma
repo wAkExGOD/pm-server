@@ -33,6 +33,11 @@ enum IssueStatus {
   DONE
 }
 
+enum ReleaseStatus {
+  UNRELEASED
+  RELEASED
+}
+
 model ConfirmEmailToken {
   userId Int    @id
   token  String @unique
@@ -49,7 +54,7 @@ model User {
   id                    Int                    @id @default(autoincrement())
   email                 String                 @unique
   name                  String
-  createdAt             DateTime               @default(now())
+  createdAt             DateTime               @default(now()) @db.Timestamptz(6)
   password              String
   verified              Boolean                @default(false)
   ConfirmEmailToken     ConfirmEmailToken?
@@ -58,6 +63,7 @@ model User {
   projectMemberships    ProjectMember[]
   assignedIssues        Issue[]                @relation("IssueAssignee")
   reportedIssues        Issue[]                @relation("IssueReporter")
+  initiatedReleases     Release[]              @relation("ReleaseInitiator")
 }
 
 model Project {
@@ -66,12 +72,13 @@ model Project {
   name        String
   description String?
   ownerId     Int
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt   DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime        @updatedAt @db.Timestamptz(6)
   owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id])
   members     ProjectMember[]
   sprints     Sprint[]
   issues      Issue[]
+  releases    Release[]
 }
 
 model ProjectMember {
@@ -79,7 +86,7 @@ model ProjectMember {
   projectId Int
   userId    Int
   role      ProjectRole @default(MEMBER)
-  createdAt DateTime    @default(now())
+  createdAt DateTime    @default(now()) @db.Timestamptz(6)
   project   Project     @relation(fields: [projectId], references: [id])
   user      User        @relation(fields: [userId], references: [id])
 
@@ -92,12 +99,12 @@ model Sprint {
   id        Int      @id @default(autoincrement())
   projectId Int
   name      String
-  startDate DateTime
-  endDate   DateTime
+  startDate DateTime @db.Timestamptz(6)
+  endDate   DateTime @db.Timestamptz(6)
   goal      String?
   isActive  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
   project   Project  @relation(fields: [projectId], references: [id])
   issues    Issue[]
 
@@ -116,14 +123,36 @@ model Issue {
   assigneeId  Int?
   reporterId  Int
   sprintId    Int?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  releaseId   Int?
+  createdAt   DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @db.Timestamptz(6)
   project     Project       @relation(fields: [projectId], references: [id])
   assignee    User?         @relation("IssueAssignee", fields: [assigneeId], references: [id])
   reporter    User          @relation("IssueReporter", fields: [reporterId], references: [id])
   sprint      Sprint?       @relation(fields: [sprintId], references: [id])
+  release     Release?      @relation(fields: [releaseId], references: [id])
 
   @@index([projectId, sprintId])
+  @@index([projectId, releaseId])
   @@index([projectId, status])
   @@index([projectId, priority])
+}
+
+model Release {
+  id          Int           @id @default(autoincrement())
+  projectId   Int
+  initiatorId Int
+  name        String
+  description String?
+  startDate   DateTime      @db.Timestamptz(6)
+  releaseDate DateTime      @db.Timestamptz(6)
+  status      ReleaseStatus @default(UNRELEASED)
+  createdAt   DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @db.Timestamptz(6)
+  project     Project       @relation(fields: [projectId], references: [id])
+  initiator   User          @relation("ReleaseInitiator", fields: [initiatorId], references: [id])
+  issues      Issue[]
+
+  @@index([projectId, status])
+  @@index([projectId, releaseDate])
 }

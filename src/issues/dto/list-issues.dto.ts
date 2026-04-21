@@ -50,6 +50,15 @@ export class ListIssuesDto {
   sprintId?: number | null;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'null') {
+      return null;
+    }
+    return value === undefined ? undefined : Number(value);
+  })
+  releaseId?: number | null;
+
+  @IsOptional()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   search?: string;

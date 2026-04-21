@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { ProjectsService } from 'src/projects/projects.service';
+import { normalizeDateTimeInput } from 'src/utils';
 import { CreateSprintDto } from './dto/create-sprint.dto';
 import { UpdateSprintDto } from './dto/update-sprint.dto';
 
@@ -99,15 +100,8 @@ export class SprintsService {
   }
 
   private validateSprintDates(startDate: string, endDate: string) {
-    const parsedStartDate = new Date(startDate);
-    const parsedEndDate = new Date(endDate);
-
-    if (
-      Number.isNaN(parsedStartDate.getTime()) ||
-      Number.isNaN(parsedEndDate.getTime())
-    ) {
-      throw new BadRequestException('Sprint dates must be valid');
-    }
+    const parsedStartDate = normalizeDateTimeInput(startDate, 'Sprint start date');
+    const parsedEndDate = normalizeDateTimeInput(endDate, 'Sprint end date');
 
     if (parsedEndDate < parsedStartDate) {
       throw new BadRequestException(

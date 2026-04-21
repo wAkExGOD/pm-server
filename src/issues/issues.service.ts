@@ -39,6 +39,7 @@ export class IssuesService {
     assigneeId: true,
     reporterId: true,
     sprintId: true,
+    releaseId: true,
     createdAt: true,
     updatedAt: true,
     assignee: {
@@ -62,6 +63,14 @@ export class IssuesService {
         isActive: true,
       },
     },
+    release: {
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        releaseDate: true,
+      },
+    },
   } as const;
 
   private get issueDelegate(): PrismaClient['issue'] {
@@ -70,7 +79,12 @@ export class IssuesService {
 
   async createIssue(projectId: number, userId: number, dto: CreateIssueDto) {
     await this.projectsService.ensureProjectAccess(projectId, userId);
-    await this.validateIssueRelations(projectId, dto.assigneeId, dto.sprintId);
+    await this.validateIssueRelations(
+      projectId,
+      dto.assigneeId,
+      dto.sprintId,
+      dto.releaseId,
+    );
 
     return await this.issueDelegate.create({
       data: {
@@ -83,6 +97,7 @@ export class IssuesService {
         assigneeId: dto.assigneeId,
         reporterId: userId,
         sprintId: dto.sprintId,
+        releaseId: dto.releaseId,
       },
       select: this.issueSelect,
     });
@@ -102,6 +117,8 @@ export class IssuesService {
       ...(dto.reporterId ? { reporterId: dto.reporterId } : {}),
       ...(dto.sprintId === null ? { sprintId: null } : {}),
       ...(typeof dto.sprintId === 'number' ? { sprintId: dto.sprintId } : {}),
+      ...(dto.releaseId === null ? { releaseId: null } : {}),
+      ...(typeof dto.releaseId === 'number' ? { releaseId: dto.releaseId } : {}),
       ...(dto.search
         ? {
             OR: [
@@ -269,7 +286,12 @@ export class IssuesService {
       existingIssue.reporterId,
       userId,
     );
-    await this.validateIssueRelations(projectId, dto.assigneeId, dto.sprintId);
+    await this.validateIssueRelations(
+      projectId,
+      dto.assigneeId,
+      dto.sprintId,
+      dto.releaseId,
+    );
 
     return await this.issueDelegate.update({
       where: { id: issueId },
@@ -283,6 +305,7 @@ export class IssuesService {
         ...(dto.status !== undefined ? { status: dto.status } : {}),
         ...(dto.assigneeId !== undefined ? { assigneeId: dto.assigneeId } : {}),
         ...(dto.sprintId !== undefined ? { sprintId: dto.sprintId } : {}),
+        ...(dto.releaseId !== undefined ? { releaseId: dto.releaseId } : {}),
       },
       select: this.issueSelect,
     });
@@ -360,6 +383,7 @@ export class IssuesService {
     projectId: number,
     assigneeId?: number,
     sprintId?: number,
+    releaseId?: number,
   ) {
     if (assigneeId !== undefined) {
       const membership = await this.projectsService.getMembership(
@@ -383,6 +407,20 @@ export class IssuesService {
 
       if (!sprint) {
         throw new BadRequestException('Sprint was not found in this project');
+      }
+    }
+
+    if (releaseId !== undefined) {
+      const release = await this.prisma.release.findFirst({
+        where: {
+          id: releaseId,
+          projectId,
+        },
+        select: { id: true },
+      });
+
+      if (!release) {
+        throw new BadRequestException('Release was not found in this project');
       }
     }
   }

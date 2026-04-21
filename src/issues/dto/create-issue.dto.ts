@@ -50,4 +50,10 @@ export class CreateIssueDto {
   @IsInt()
   @Min(1)
   sprintId?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  releaseId?: number;
 }

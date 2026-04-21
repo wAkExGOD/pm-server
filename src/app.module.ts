@@ -7,6 +7,7 @@ import { EmailModule } from './email/email.module';
 import { ProjectsModule } from './projects/projects.module';
 import { SprintsModule } from './sprints/sprints.module';
 import { IssuesModule } from './issues/issues.module';
+import { ReleasesModule } from './releases/releases.module';
 
 import { AppController } from './app.controller';
 
@@ -22,6 +23,7 @@ import { PrismaService } from './prisma.service.js';
     ProjectsModule,
     SprintsModule,
     IssuesModule,
+    ReleasesModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
