@@ -1,98 +1,277 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# PM App Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend API for a project management application built with NestJS, Prisma, and PostgreSQL.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The service handles:
 
-## Description
+- authentication with JWT
+- email confirmation and password recovery
+- project creation and membership management
+- sprint planning
+- issue and backlog management
+- Kanban board updates
+- release planning and release issue tracking
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## What the backend does
 
-## Project setup
+This backend powers the main collaboration flows of the PM App:
 
-```bash
-$ npm install
+- users can register, verify their email, log in, and recover passwords
+- authenticated users can create projects and invite teammates by email
+- project owners and admins can manage team roles, sprints, and releases
+- teams can create issues, assign work, move issues into sprints, and update issue statuses
+- releases can group issues and be filtered by status, assignee, and search
+
+## Tech stack
+
+- [NestJS](https://nestjs.com/) for the API framework
+- [Prisma ORM](https://www.prisma.io/) for database access
+- [PostgreSQL](https://www.postgresql.org/) as the main database
+- [JWT](https://jwt.io/) for authentication
+- [Passport](https://www.passportjs.org/) for auth strategies
+- [Argon2](https://github.com/ranisalt/node-argon2) for password hashing
+- [Nodemailer](https://nodemailer.com/) for email delivery
+- TypeScript throughout the project
+
+## Main modules
+
+- `auth` - login, registration, profile, email confirmation, password reset
+- `users` - user creation, update, verification, lookup helpers
+- `projects` - projects, memberships, roles
+- `issues` - issues, backlog, board, moving issues to sprint
+- `sprints` - sprint creation, updates, active sprint handling
+- `releases` - release creation, listing, issue filtering inside releases
+- `email` - SMTP email sending
+
+## Data model overview
+
+Main entities in the database:
+
+- `User`
+- `Project`
+- `ProjectMember`
+- `Sprint`
+- `Issue`
+- `Release`
+- `ConfirmEmailToken`
+- `PasswordRecoveryToken`
+
+Enums used by the API:
+
+- project roles: `OWNER`, `ADMIN`, `MEMBER`
+- issue types: `BUG`, `TASK`, `STORY`
+- issue priorities: `LOW`, `MEDIUM`, `HIGH`
+- issue statuses: `TODO`, `IN_PROGRESS`, `CODE_REVIEW`, `DONE`
+- release statuses: `UNRELEASED`, `RELEASED`
+
+## API base URL
+
+The app starts with the global prefix `api`, so local endpoints are served from:
+
+```text
+http://localhost:5555/api
 ```
 
-## Compile and run the project
+## Main routes
+
+### Auth
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/change-password`
+- `GET /api/auth/profile`
+- `GET /api/auth/confirm/:token`
+
+### Projects
+
+- `POST /api/projects`
+- `GET /api/projects`
+- `GET /api/projects/:projectId`
+- `PATCH /api/projects/:projectId`
+- `GET /api/projects/:projectId/members`
+- `POST /api/projects/:projectId/members/add-by-email`
+
+### Issues, backlog, and board
+
+- `POST /api/projects/:projectId/issues`
+- `GET /api/projects/:projectId/issues`
+- `GET /api/projects/:projectId/issues/:issueId`
+- `PATCH /api/projects/:projectId/issues/:issueId`
+- `DELETE /api/projects/:projectId/issues/:issueId`
+- `GET /api/projects/:projectId/backlog`
+- `GET /api/projects/:projectId/board`
+- `POST /api/projects/:projectId/issues/:issueId/move-to-sprint`
+
+### Sprints
+
+- `POST /api/projects/:projectId/sprints`
+- `PATCH /api/projects/:projectId/sprints/:sprintId`
+- `GET /api/projects/:projectId/sprints`
+- `GET /api/projects/:projectId/sprints/active`
+
+### Releases
+
+- `POST /api/projects/:projectId/releases`
+- `GET /api/projects/:projectId/releases`
+- `GET /api/projects/:projectId/releases/:releaseId`
+
+### Email utility
+
+- `POST /api/email/send`
+
+## Environment variables
+
+Create a `.env` file in `pm-server` with values similar to these:
+
+```env
+PORT=5555
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pm_db
+JWT_SECRET=replace_with_a_secure_secret
+CLIENT_URL=http://localhost:3000
+API_URL=http://localhost:5555/api
+
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_USER=example@example.com
+EMAIL_PASS=your_password
+```
+
+Notes:
+
+- `CLIENT_URL` is used for CORS and frontend redirects after email confirmation
+- `API_URL` is used when generating confirmation links sent by email
+- email-related variables are required if you want registration confirmation and password recovery to work
+
+## Run locally without Docker
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Create the database
+
+Make sure PostgreSQL is running locally and a database named `pm_db` exists.
+
+### 3. Configure environment variables
+
+Create `.env` in `pm-server` using the example above.
+
+### 4. Apply database migrations
+
+```bash
+npx prisma generate
+npx prisma migrate dev
+```
+
+### 5. Start the backend
 
 ```bash
 # development
-$ npm run start
+npm run start:dev
 
-# watch mode
-$ npm run start:dev
+# regular start
+npm run start
 
-# production mode
-$ npm run start:prod
+# production build
+npm run build
+npm run start:prod
 ```
 
-## Run tests
+After startup, the API is available at:
+
+```text
+http://localhost:5555/api
+```
+
+## Run with Docker
+
+The included `docker-compose.yml` starts:
+
+- PostgreSQL
+- the NestJS backend
+- pgAdmin
+
+### Start everything
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+docker compose up --build
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+If this is the first run for a fresh database, apply migrations inside the app container:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose exec app npx prisma migrate deploy
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Useful URLs:
 
-## Resources
+- API: `http://localhost:5555/api`
+- pgAdmin: `http://localhost:5050`
 
-Check out a few resources that may come in handy when working with NestJS:
+### Start existing containers again
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+docker compose up
+```
 
-## Support
+### Stop and remove containers
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+docker compose down
+```
 
-## Stay in touch
+### Stop and remove containers with database volume data
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+docker compose down -v
+```
 
-## License
+## pgAdmin connection
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+After opening pgAdmin, register the PostgreSQL server with these values:
+
+### General tab
+
+- Name: `pm-postgres`
+
+### Connection tab
+
+| Field             | Value       |
+| :---------------- | :---------- |
+| Host name/address | `pm-postgres` |
+| Port              | `5432` |
+| Username          | `postgres` |
+| Password          | `postgres` |
+
+## Scripts
+
+```bash
+npm run build
+npm run format
+npm run start
+npm run start:dev
+npm run start:debug
+npm run start:prod
+npm run lint
+npm run test
+npm run test:watch
+npm run test:cov
+npm run test:e2e
+```
+
+## Authorization notes
+
+- most project-related endpoints require a Bearer token
+- JWT-protected routes use the NestJS `JwtAuthGuard`
+- project management actions such as sprint creation or adding members are limited by project role
+
+## Current Docker setup note
+
+`docker-compose.yml` in this folder covers the backend stack only. If you are running the frontend locally, point it to this API with:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5555/api
+```
