@@ -26,7 +26,7 @@ export class CreateIssueDto {
   )
   @IsOptional()
   @IsString()
-  @MaxLength(2000, { message: 'Description must be at most 2000 characters' })
+  @MaxLength(50000, { message: 'Description must be at most 50000 characters' })
   description?: string;
 
   @IsEnum(IssueType, { message: 'Invalid issue type' })
@@ -56,4 +56,10 @@ export class CreateIssueDto {
   @IsInt()
   @Min(1)
   releaseId?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  storyPoints?: number;
 }

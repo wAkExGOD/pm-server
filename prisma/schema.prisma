@@ -54,6 +54,7 @@ model User {
   id                    Int                    @id @default(autoincrement())
   email                 String                 @unique
   name                  String
+  avatarUrl             String?
   createdAt             DateTime               @default(now()) @db.Timestamptz(6)
   password              String
   verified              Boolean                @default(false)
@@ -64,6 +65,7 @@ model User {
   assignedIssues        Issue[]                @relation("IssueAssignee")
   reportedIssues        Issue[]                @relation("IssueReporter")
   initiatedReleases     Release[]              @relation("ReleaseInitiator")
+  issueComments         IssueComment[]
 }
 
 model Project {
@@ -120,6 +122,7 @@ model Issue {
   type        IssueType
   priority    IssuePriority
   status      IssueStatus   @default(TODO)
+  storyPoints Int?
   assigneeId  Int?
   reporterId  Int
   sprintId    Int?
@@ -131,11 +134,26 @@ model Issue {
   reporter    User          @relation("IssueReporter", fields: [reporterId], references: [id])
   sprint      Sprint?       @relation(fields: [sprintId], references: [id])
   release     Release?      @relation(fields: [releaseId], references: [id])
+  comments    IssueComment[]
 
   @@index([projectId, sprintId])
   @@index([projectId, releaseId])
   @@index([projectId, status])
   @@index([projectId, priority])
+}
+
+model IssueComment {
+  id        Int      @id @default(autoincrement())
+  issueId    Int
+  authorId   Int
+  content    String
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
+  issue      Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author     User      @relation(fields: [authorId], references: [id])
+
+  @@index([issueId, createdAt])
+  @@index([authorId])
 }
 
 model Release {

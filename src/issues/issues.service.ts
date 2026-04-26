@@ -7,6 +7,7 @@ import {
 import { PrismaService } from 'src/prisma.service';
 import { ProjectsService } from 'src/projects/projects.service';
 import { CreateIssueDto } from './dto/create-issue.dto';
+import { CreateIssueCommentDto } from './dto/create-issue-comment.dto';
 import { UpdateIssueDto } from './dto/update-issue.dto';
 import { ListIssuesDto } from './dto/list-issues.dto';
 import { ProjectRole } from 'src/projects/project-role.enum';
@@ -35,8 +36,9 @@ export class IssuesService {
     description: true,
     type: true,
     priority: true,
-    status: true,
-    assigneeId: true,
+      status: true,
+      storyPoints: true,
+      assigneeId: true,
     reporterId: true,
     sprintId: true,
     releaseId: true,
@@ -47,6 +49,7 @@ export class IssuesService {
         id: true,
         name: true,
         email: true,
+        avatarUrl: true,
       },
     },
     reporter: {
@@ -54,6 +57,7 @@ export class IssuesService {
         id: true,
         name: true,
         email: true,
+        avatarUrl: true,
       },
     },
     sprint: {
@@ -94,6 +98,7 @@ export class IssuesService {
         type: dto.type,
         priority: dto.priority,
         status: dto.status,
+        storyPoints: dto.storyPoints,
         assigneeId: dto.assigneeId,
         reporterId: userId,
         sprintId: dto.sprintId,
@@ -303,6 +308,7 @@ export class IssuesService {
         ...(dto.type !== undefined ? { type: dto.type } : {}),
         ...(dto.priority !== undefined ? { priority: dto.priority } : {}),
         ...(dto.status !== undefined ? { status: dto.status } : {}),
+        ...(dto.storyPoints !== undefined ? { storyPoints: dto.storyPoints } : {}),
         ...(dto.assigneeId !== undefined ? { assigneeId: dto.assigneeId } : {}),
         ...(dto.sprintId !== undefined ? { sprintId: dto.sprintId } : {}),
         ...(dto.releaseId !== undefined ? { releaseId: dto.releaseId } : {}),
@@ -379,13 +385,211 @@ export class IssuesService {
     });
   }
 
+  async listIssueComments(projectId: number, issueId: number, userId: number) {
+    await this.projectsService.ensureProjectAccess(projectId, userId);
+    await this.ensureIssueExists(projectId, issueId);
+
+    return await this.prisma.issueComment.findMany({
+      where: {
+        issueId,
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+  }
+
+  async createIssueComment(
+    projectId: number,
+    issueId: number,
+    userId: number,
+    dto: CreateIssueCommentDto,
+  ) {
+    await this.projectsService.ensureProjectAccess(projectId, userId);
+    await this.ensureIssueExists(projectId, issueId);
+
+    return await this.prisma.issueComment.create({
+      data: {
+        issueId,
+        authorId: userId,
+        content: dto.content,
+      },
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+  }
+
+  async deleteIssueComment(
+    projectId: number,
+    issueId: number,
+    commentId: number,
+    userId: number,
+  ) {
+    const membership = await this.projectsService.ensureProjectAccess(
+      projectId,
+      userId,
+    );
+    await this.ensureIssueExists(projectId, issueId);
+
+    const comment = await this.prisma.issueComment.findFirst({
+      where: {
+        id: commentId,
+        issueId,
+        issue: {
+          projectId,
+        },
+      },
+      select: {
+        id: true,
+        authorId: true,
+      },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    if (
+      membership.role !== ProjectRole.OWNER &&
+      membership.role !== ProjectRole.ADMIN &&
+      comment.authorId !== userId
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to delete this comment',
+      );
+    }
+
+    await this.prisma.issueComment.delete({
+      where: {
+        id: commentId,
+      },
+    });
+
+    return { success: true };
+  }
+
+  async getProjectSummary(projectId: number, userId: number) {
+    await this.projectsService.ensureProjectAccess(projectId, userId);
+
+    const sinceDate = new Date();
+    sinceDate.setUTCDate(sinceDate.getUTCDate() - 7);
+
+    const [
+      completedLast7Days,
+      createdLast7Days,
+      issuesByStatus,
+      issuesByType,
+      issuesByPriority,
+      teamWorkload,
+    ] = await Promise.all([
+      this.issueDelegate.count({
+        where: {
+          projectId,
+          status: IssueStatus.DONE,
+          updatedAt: {
+            gte: sinceDate,
+          },
+        },
+      }),
+      this.issueDelegate.count({
+        where: {
+          projectId,
+          createdAt: {
+            gte: sinceDate,
+          },
+        },
+      }),
+      this.issueDelegate.groupBy({
+        by: ['status'],
+        where: { projectId },
+        _count: { _all: true },
+      }),
+      this.issueDelegate.groupBy({
+        by: ['type'],
+        where: { projectId },
+        _count: { _all: true },
+      }),
+      this.issueDelegate.groupBy({
+        by: ['priority'],
+        where: { projectId },
+        _count: { _all: true },
+      }),
+      this.prisma.projectMember.findMany({
+        where: { projectId },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatarUrl: true,
+              _count: {
+                select: {
+                  assignedIssues: {
+                    where: { projectId },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      completedLast7Days,
+      createdLast7Days,
+      issuesByStatus: issuesByStatus.map((item) => ({
+        label: item.status,
+        value: item._count._all,
+      })),
+      issuesByType: issuesByType.map((item) => ({
+        label: item.type,
+        value: item._count._all,
+      })),
+      issuesByPriority: issuesByPriority.map((item) => ({
+        label: item.priority,
+        value: item._count._all,
+      })),
+      teamWorkload: teamWorkload.map(({ user }) => ({
+        user,
+        value: user._count.assignedIssues,
+      })),
+    };
+  }
+
   private async validateIssueRelations(
     projectId: number,
-    assigneeId?: number,
-    sprintId?: number,
-    releaseId?: number,
+    assigneeId?: number | null,
+    sprintId?: number | null,
+    releaseId?: number | null,
   ) {
-    if (assigneeId !== undefined) {
+    if (assigneeId !== undefined && assigneeId !== null) {
       const membership = await this.projectsService.getMembership(
         projectId,
         assigneeId,
@@ -396,7 +600,7 @@ export class IssuesService {
       }
     }
 
-    if (sprintId !== undefined) {
+    if (sprintId !== undefined && sprintId !== null) {
       const sprint = await this.prisma.sprint.findFirst({
         where: {
           id: sprintId,
@@ -410,7 +614,7 @@ export class IssuesService {
       }
     }
 
-    if (releaseId !== undefined) {
+    if (releaseId !== undefined && releaseId !== null) {
       const release = await this.prisma.release.findFirst({
         where: {
           id: releaseId,
@@ -422,6 +626,20 @@ export class IssuesService {
       if (!release) {
         throw new BadRequestException('Release was not found in this project');
       }
+    }
+  }
+
+  private async ensureIssueExists(projectId: number, issueId: number) {
+    const issue = await this.issueDelegate.findFirst({
+      where: {
+        id: issueId,
+        projectId,
+      },
+      select: { id: true },
+    });
+
+    if (!issue) {
+      throw new NotFoundException('Issue not found');
     }
   }
 

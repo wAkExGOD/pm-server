@@ -8,6 +8,15 @@ import { User, Prisma } from '../../generated/prisma/client.js';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private readonly publicUserSelect = {
+    id: true,
+    name: true,
+    email: true,
+    avatarUrl: true,
+    createdAt: true,
+    verified: true,
+  } as const;
+
   async create(data: Prisma.UserCreateInput): Promise<User> {
     return await this.prisma.user.create({
       data: {
@@ -45,6 +54,19 @@ export class UsersService {
         id,
       },
       data: updateUserDto,
+      select: this.publicUserSelect,
+    });
+  }
+
+  async updateAvatar(id: number, avatarUrl: string) {
+    return await this.prisma.user.update({
+      where: {
+        id,
+      },
+      data: {
+        avatarUrl,
+      },
+      select: this.publicUserSelect,
     });
   }
 

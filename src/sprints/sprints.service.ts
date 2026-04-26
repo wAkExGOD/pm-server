@@ -6,6 +6,7 @@ import {
 import { PrismaService } from 'src/prisma.service';
 import { ProjectsService } from 'src/projects/projects.service';
 import { normalizeDateTimeInput } from 'src/utils';
+import { ListReleaseIssuesDto } from 'src/releases/dto/list-release-issues.dto';
 import { CreateSprintDto } from './dto/create-sprint.dto';
 import { UpdateSprintDto } from './dto/update-sprint.dto';
 
@@ -53,6 +54,99 @@ export class SprintsService {
       where: { projectId, isActive: true },
       orderBy: { updatedAt: 'desc' },
     });
+  }
+
+  async getSprintById(
+    projectId: number,
+    sprintId: number,
+    userId: number,
+    dto: ListReleaseIssuesDto,
+  ) {
+    await this.projectsService.ensureProjectAccess(projectId, userId);
+
+    const sprint = await this.prisma.sprint.findFirst({
+      where: {
+        id: sprintId,
+        projectId,
+      },
+    });
+
+    if (!sprint) {
+      throw new NotFoundException('Sprint not found');
+    }
+
+    const issues = await this.prisma.issue.findMany({
+      where: {
+        projectId,
+        sprintId,
+        ...(dto.status ? { status: dto.status } : {}),
+        ...(dto.assigneeId ? { assigneeId: dto.assigneeId } : {}),
+        ...(dto.search
+          ? {
+              title: {
+                contains: dto.search,
+                mode: 'insensitive',
+              },
+            }
+          : {}),
+      },
+      orderBy:
+        dto.sortBy === 'status'
+          ? [{ status: dto.order ?? 'asc' }, { updatedAt: 'desc' }]
+          : [{ updatedAt: dto.order ?? 'desc' }, { id: 'desc' }],
+      select: {
+        id: true,
+        projectId: true,
+        title: true,
+        description: true,
+        type: true,
+        priority: true,
+        status: true,
+        storyPoints: true,
+        assigneeId: true,
+        reporterId: true,
+        sprintId: true,
+        releaseId: true,
+        createdAt: true,
+        updatedAt: true,
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+        reporter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+        sprint: {
+          select: {
+            id: true,
+            name: true,
+            isActive: true,
+          },
+        },
+        release: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            releaseDate: true,
+          },
+        },
+      },
+    });
+
+    return {
+      ...sprint,
+      issues,
+    };
   }
 
   async updateSprint(

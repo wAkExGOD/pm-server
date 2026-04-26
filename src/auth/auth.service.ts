@@ -171,6 +171,7 @@ export class AuthService {
       id: userInfo.id,
       email: userInfo.email,
       name: userInfo.name,
+      avatarUrl: userInfo.avatarUrl,
       createdAt: userInfo.createdAt,
       verified: userInfo.verified,
     };

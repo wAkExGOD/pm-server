@@ -173,6 +173,7 @@ export class ProjectsService {
             id: true,
             email: true,
             name: true,
+            avatarUrl: true,
             verified: true,
           },
         },
@@ -197,6 +198,7 @@ export class ProjectsService {
             id: true,
             email: true,
             name: true,
+            avatarUrl: true,
             verified: true,
           },
         },
@@ -235,6 +237,7 @@ export class ProjectsService {
                 id: true,
                 email: true,
                 name: true,
+                avatarUrl: true,
               },
             },
             _count: {

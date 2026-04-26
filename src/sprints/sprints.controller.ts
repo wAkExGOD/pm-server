@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -14,6 +15,7 @@ import { type RequestWithUser } from 'src/types';
 import { ProjectRoles } from 'src/projects/decorators/project-roles.decorator';
 import { ProjectRoleGuard } from 'src/projects/guards/project-role.guard';
 import { ProjectRole } from 'src/projects/project-role.enum';
+import { ListReleaseIssuesDto } from 'src/releases/dto/list-release-issues.dto';
 import { CreateSprintDto } from './dto/create-sprint.dto';
 import { UpdateSprintDto } from './dto/update-sprint.dto';
 import { SprintsService } from './sprints.service';
@@ -65,5 +67,20 @@ export class SprintsController {
     @Param('projectId', ParseIntPipe) projectId: number,
   ) {
     return await this.sprintsService.getActiveSprint(projectId, req.user.id);
+  }
+
+  @Get(':sprintId')
+  async getSprintById(
+    @Request() req: RequestWithUser,
+    @Param('projectId', ParseIntPipe) projectId: number,
+    @Param('sprintId', ParseIntPipe) sprintId: number,
+    @Query() dto: ListReleaseIssuesDto,
+  ) {
+    return await this.sprintsService.getSprintById(
+      projectId,
+      sprintId,
+      req.user.id,
+      dto,
+    );
   }
 }

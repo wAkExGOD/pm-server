@@ -14,6 +14,7 @@ import {
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { type RequestWithUser } from 'src/types';
 import { CreateIssueDto } from './dto/create-issue.dto';
+import { CreateIssueCommentDto } from './dto/create-issue-comment.dto';
 import { UpdateIssueDto } from './dto/update-issue.dto';
 import { ListIssuesDto } from './dto/list-issues.dto';
 import { IssuesService } from './issues.service';
@@ -66,6 +67,49 @@ export class IssuesController {
       issueId,
       req.user.id,
       dto,
+    );
+  }
+
+  @Get(':issueId/comments')
+  async listIssueComments(
+    @Request() req: RequestWithUser,
+    @Param('projectId', ParseIntPipe) projectId: number,
+    @Param('issueId', ParseIntPipe) issueId: number,
+  ) {
+    return await this.issuesService.listIssueComments(
+      projectId,
+      issueId,
+      req.user.id,
+    );
+  }
+
+  @Post(':issueId/comments')
+  async createIssueComment(
+    @Request() req: RequestWithUser,
+    @Param('projectId', ParseIntPipe) projectId: number,
+    @Param('issueId', ParseIntPipe) issueId: number,
+    @Body() dto: CreateIssueCommentDto,
+  ) {
+    return await this.issuesService.createIssueComment(
+      projectId,
+      issueId,
+      req.user.id,
+      dto,
+    );
+  }
+
+  @Delete(':issueId/comments/:commentId')
+  async deleteIssueComment(
+    @Request() req: RequestWithUser,
+    @Param('projectId', ParseIntPipe) projectId: number,
+    @Param('issueId', ParseIntPipe) issueId: number,
+    @Param('commentId', ParseIntPipe) commentId: number,
+  ) {
+    return await this.issuesService.deleteIssueComment(
+      projectId,
+      issueId,
+      commentId,
+      req.user.id,
     );
   }
 

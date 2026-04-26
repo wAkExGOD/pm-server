@@ -53,6 +53,7 @@ export class ReleasesService {
     type: true,
     priority: true,
     status: true,
+    storyPoints: true,
     assigneeId: true,
     reporterId: true,
     sprintId: true,
@@ -64,6 +65,7 @@ export class ReleasesService {
         id: true,
         name: true,
         email: true,
+        avatarUrl: true,
       },
     },
     reporter: {
@@ -71,6 +73,22 @@ export class ReleasesService {
         id: true,
         name: true,
         email: true,
+        avatarUrl: true,
+      },
+    },
+    sprint: {
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+      },
+    },
+    release: {
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        releaseDate: true,
       },
     },
   } as const;
