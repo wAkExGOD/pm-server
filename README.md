@@ -194,17 +194,35 @@ The included `docker-compose.yml` starts:
 - the NestJS backend
 - pgAdmin
 
-### Start everything
+### 1. Configure environment variables
+
+Create a `.env` file in `pm-server` from the example above.
+
+For Docker, `DATABASE_URL` is provided by `docker-compose.yml`, so the local
+`localhost` database URL in `.env` is not used by the app container.
+
+### 2. Start everything
 
 ```bash
 docker compose up --build
 ```
 
-If this is the first run for a fresh database, apply migrations inside the app container:
+You can also run it in the background:
+
+```bash
+docker compose up --build -d
+```
+
+### 3. Apply database migrations
+
+If this is the first run for a fresh database, apply migrations inside the app
+container:
 
 ```bash
 docker compose exec app npx prisma migrate deploy
 ```
+
+Run this command again after pulling changes that add new Prisma migrations.
 
 Useful URLs:
 
@@ -228,6 +246,9 @@ docker compose down
 ```bash
 docker compose down -v
 ```
+
+This deletes the local Docker database volume. Use it only when you want a fresh
+empty database.
 
 ## pgAdmin connection
 
